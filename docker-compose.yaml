@@ -1,19 +1,16 @@
 services:
   db:
     image: postgres:18-alpine
-    container_name: testDB
-    restart: on-failure
-
+    container_name: testingDB
+    restart: always
+    ports:
+      - "5499:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?error}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?error}
-      POSTGRES_DB: ${POSTGRES_DB_NAME:?error} # db name
+      POSTGRES_DB: ${POSTGRES_DB_NAME:?error}
 
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
+      - postgres_data:/var/lib/postgresql/data
 volumes:
   postgres_data:
-
