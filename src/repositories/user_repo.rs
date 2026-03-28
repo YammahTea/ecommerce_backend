@@ -1,9 +1,10 @@
 use sqlx::{Pool, Postgres};
+use crate::models::error::UserCreationError;
 
 pub async fn create_user (pool: Pool<Postgres>,
                           user_email: &str,
                           user_hashed_password: &str
-) -> Result<String, String> {
+) -> Result<String, UserCreationError> {
 
 
     let query = r"INSERT INTO users (email, hashed_password) VALUES ($1, $2)";
@@ -19,12 +20,12 @@ pub async fn create_user (pool: Pool<Postgres>,
         Ok(_) => Ok("User created successfully.".to_string()),
 
         Err(sqlx::Error::Database(db_err)) if db_err.is_unique_violation() => {
-            Err("User already exists.".to_string())
+            Err(UserCreationError::UserAlreadyExists)
         },
 
         Err(e) =>{
             eprintln!("Error occurred while creating user in repositories/user_repo.rs: {}", e);
-            Err("Failed to connect to database.".to_string())
+            Err(UserCreationError::DatabaseError)
         }
     }
 }
