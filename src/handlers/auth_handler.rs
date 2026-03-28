@@ -12,14 +12,15 @@ pub async fn register(State(pool): State<Pool<Postgres>>,
     let result = register_user(pool, user_payload.email, user_payload.password).await;
 
     match result {
-        Ok(success_message) => (StatusCode::OK, success_message).into_response(),
+        Ok(success_message) => (StatusCode::CREATED, success_message).into_response(),
 
+        // TODO: Implement Enum (App error)
         Err(error_message) => {
             if error_message.ends_with("exists.") {
                 (StatusCode::CONFLICT, error_message).into_response()
             }
             else {
-                (StatusCode::INTERNAL_SERVER_ERROR, error_message).into_response()
+                (StatusCode::INTERNAL_SERVER_ERROR, "Unexpected error happened while trying to create the user.").into_response()
             }
         }
     }

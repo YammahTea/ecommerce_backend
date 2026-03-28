@@ -1,4 +1,6 @@
 pub mod user;
+
+// TODO: Implement Database config in a separate file
 // use serde;
 //
 // #[derive(Clone, Debug)]

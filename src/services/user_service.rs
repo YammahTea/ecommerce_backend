@@ -4,6 +4,7 @@ pub const BCRYPT_COST: u32 = 12;
 
 
 fn hash_password(password: &String) -> String {
+    // TODO: Handle bcrypt result without unwrap
     bcrypt::hash(&password, BCRYPT_COST).unwrap()
 }
 
