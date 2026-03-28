@@ -10,6 +10,6 @@ fn hash_password(password: &String) -> String {
 
 pub async fn register_user(pool: Pool<Postgres>, user_email:String, user_password: String) -> Result<String, String> {
     let hashed_password = hash_password(&user_password);
-
+    
     user_repo::create_user(pool, &user_email, &hashed_password).await
 }

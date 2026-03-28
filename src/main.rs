@@ -13,11 +13,14 @@ use sqlx::{Executor, Pool, Postgres};
 use std::time::Duration;
 use axum::routing::post;
 use crate::handlers::auth_handler::register;
+use crate::models::database_config::DatabaseConfig;
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-    let pool: Pool<Postgres> = create_pool_from_env().await;
+
+    let config = DatabaseConfig::default();
+    let pool: Pool<Postgres> = create_pool_from_env(&config).await;
     println!("Successfully connected to database!");
 
     let app = app(pool);
@@ -35,26 +38,32 @@ fn app (pool: Pool<Postgres>) -> Router {
 }
 
 async fn health_check() -> impl IntoResponse {
-    // more check ups will be added as the app develops
+    // more checks will be added as the app develops
     (StatusCode::OK, "Looks good").into_response()
 }
 
 // Connect to database
-async fn create_pool_from_env() -> Pool<Postgres> {
-    let database_url = &env::var("DATABASE_URL").expect("DATABASE_URL is not set in .env");
+async fn create_pool_from_env(config: &DatabaseConfig) -> Pool<Postgres> {
 
     println!("Connecting to database...");
 
     PgPoolOptions::new()
-        .max_connections(15)
+        .max_connections(config.max_connections)
+        .min_connections(config.min_connections)
+
         .test_before_acquire(true)
+
+        .acquire_timeout(config.acquire_timeout)
+
         .after_connect(|conn, _meta| Box::pin(async move {
             conn.execute("SELECT 1;").await?;
             Ok(())
         }))
-        .idle_timeout(Duration::from_secs(300))
-        .connect(&database_url)
+
+        .idle_timeout(config.idle_timeout)
+
+        .connect(&*config.database_url)
         .await
-        .expect("Failed to connect to database, please check if the database is running or if the db url is correct")
+        .expect("Failed to connect to database, please check if the database is running or if the database url is correct")
 
 }
