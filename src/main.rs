@@ -10,7 +10,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use sqlx::{Executor, Pool, Postgres};
 use axum::routing::post;
-use crate::handlers::auth_handler::register;
+use crate::handlers::auth_handler::{login, register};
 use crate::models::database_config::DatabaseConfig;
 
 #[tokio::main]
@@ -32,6 +32,7 @@ fn app (pool: Pool<Postgres>) -> Router {
     Router::new()
         .route("/health", get(health_check))
         .route("/user/register", post(register))
+        .route("/user/login", post(login))
         .with_state(pool)
 }
 

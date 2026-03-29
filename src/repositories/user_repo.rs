@@ -1,7 +1,8 @@
 use sqlx::{Pool, Postgres};
-use crate::models::error::UserCreationError;
+use crate::models::error::{UserCreationError, UserLoginError};
+use crate::models::user::User;
 
-pub async fn create_user (pool: Pool<Postgres>,
+pub async fn create_user (pool: &Pool<Postgres>,
                           user_email: &str,
                           user_hashed_password: &str
 ) -> Result<String, UserCreationError> {
@@ -13,7 +14,7 @@ pub async fn create_user (pool: Pool<Postgres>,
         // note: user ID is already generated in users table (check migration create_users_table.sql file)
         .bind(&user_email)
         .bind(&user_hashed_password)
-        .fetch_optional(&pool)
+        .fetch_optional(pool)
         .await;
 
     match result {
@@ -28,4 +29,30 @@ pub async fn create_user (pool: Pool<Postgres>,
             Err(UserCreationError::DatabaseError)
         }
     }
+}
+
+pub async fn get_user_by_email(pool: &Pool<Postgres>, user_email: &str) -> Result<Option<User>, UserLoginError> {
+    let query = r"SELECT * FROM users WHERE email = $1";
+
+    sqlx::query_as::<_, User>(query)
+        .bind(&user_email)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| {
+            eprintln!("Error occurred while fetching user by email in repositories/user_repo: {}", e);
+            UserLoginError::DatabaseError
+        })
+}
+
+pub async fn get_user_by_username(pool: &Pool<Postgres>, username: &str) -> Result<Option<User>, UserLoginError> {
+    let query = r"SELECT * FROM users WHERE username = $1";
+
+    sqlx::query_as::<_, User>(query)
+        .bind(&username)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| {
+            eprintln!("Error occurred while fetching user by username in repositories/user_repo: {}", e);
+            UserLoginError::DatabaseError
+        })
 }
