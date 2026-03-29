@@ -22,3 +22,24 @@ impl IntoResponse for UserCreationError {
         body.into_response()
     }
 }
+
+#[derive(Debug)]
+pub enum UserLoginError {
+    InvalidCredentials, // username or password is incorrect or user does NOT exist
+    TokenCreationError,
+    DatabaseError
+}
+
+impl IntoResponse for UserLoginError {
+    fn into_response(self) -> Response {
+        let body = match self {
+
+            UserLoginError::InvalidCredentials => (StatusCode::UNAUTHORIZED, "Wrong username or password."),
+            UserLoginError::TokenCreationError => (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong while generating the token."),
+            UserLoginError::DatabaseError => (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong while fetching the user.")
+
+        };
+
+        body.into_response()
+    }
+}
