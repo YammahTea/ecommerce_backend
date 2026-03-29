@@ -14,7 +14,7 @@ pub async fn register(State(pool): State<Pool<Postgres>>,
     let is_valid_email = EmailAddress::is_valid(user_payload.email.as_ref());
 
     if is_valid_email {
-        let result = register_user(pool, String::from(user_payload.email), user_payload.password).await;
+        let result = register_user(&pool, String::from(user_payload.email), user_payload.password).await;
 
         match result {
             Ok(success_message) => Ok((StatusCode::CREATED, success_message).into_response()),

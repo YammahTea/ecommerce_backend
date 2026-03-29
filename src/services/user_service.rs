@@ -17,7 +17,7 @@ fn looks_like_email(mail: &str) -> bool {
     mail.contains("@")
 }
 
-pub async fn register_user(pool: Pool<Postgres>, user_email:String, user_password: String) -> Result<String, UserCreationError> {
+pub async fn register_user(pool: &Pool<Postgres>, user_email:String, user_password: String) -> Result<String, UserCreationError> {
 
     let hashed_password = {
         match hash_password(&user_password) {
