@@ -1,5 +1,7 @@
 use std::env;
 use std::time::Duration;
+use sqlx::{Pool, Postgres};
+use crate::models::auth::AuthConfig;
 
 #[derive(Clone, Debug)]
 pub struct DatabaseConfig {
@@ -24,4 +26,10 @@ impl Default for DatabaseConfig {
             idle_timeout: Duration::from_secs(env::var("DB_IDLE_TIMEOUT").expect("DB_IDLE_TIMEOUT is not set in .env").parse().unwrap()),
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct AppState {
+    pub pool: Pool<Postgres>,
+    pub auth_config: AuthConfig
 }

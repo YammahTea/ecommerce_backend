@@ -7,9 +7,9 @@ use crate::repositories::user_repo;
 use crate::models::error::{AuthMiddlewareError, UserCreationError, UserLoginError};
 
 
-fn hash_password(password: &str) -> BcryptResult<String> {
-    let _bcrypt_cost:u32 = AuthConfig::default().bcrypt_cost;
-    bcrypt::hash(&password, _bcrypt_cost)
+fn hash_password(password: &str, auth_config: &AuthConfig) -> BcryptResult<String> {
+    let bcrypt_cost:u32 = auth_config.bcrypt_cost;
+    bcrypt::hash(&password, bcrypt_cost)
 }
 
 fn verify_password(password: &str, stored_hashed_password: &str) -> BcryptResult<bool> {
@@ -20,13 +20,12 @@ fn looks_like_email(mail: &str) -> bool {
     mail.contains("@")
 }
 
-fn create_access_token(user_id: Uuid) -> Result<String, UserLoginError> {
+fn create_access_token(user_id: Uuid, auth_config: &AuthConfig) -> Result<String, UserLoginError> {
 
-    let user_auth_config:AuthConfig = AuthConfig::default();
 
     let expiration: usize = chrono::Utc::now()
-        .checked_add_signed(chrono::Duration::hours(user_auth_config.access_token_expiration_time))
-        .expect("Invalid timestamp.")
+        .checked_add_signed(chrono::Duration::hours(auth_config.access_token_expiration_time))
+        .ok_or(UserLoginError::TokenCreationError)?
         .timestamp() as usize;
 
     let claims: Claims = Claims {
@@ -34,7 +33,7 @@ fn create_access_token(user_id: Uuid) -> Result<String, UserLoginError> {
         exp: expiration
     };
 
-    let secret:String = user_auth_config.jwt_secret;
+    let secret = &auth_config.jwt_secret;
 
     let token = encode(
         &Header::default(),
@@ -62,10 +61,10 @@ pub fn verify_access_token(token: &str) -> Result<Claims, AuthMiddlewareError>  
 }
 
 
-pub async fn register_user(pool: &Pool<Postgres>, user_email:String, user_password: String) -> Result<String, UserCreationError> {
+pub async fn register_user(pool: &Pool<Postgres>, auth_config: AuthConfig, user_email:String, user_password: String) -> Result<String, UserCreationError> {
 
     let hashed_password = {
-        match hash_password(&user_password) {
+        match hash_password(&user_password, &auth_config) {
             Ok(result) => result,
             Err(error_message) => {
                 eprintln!("Error occurred while hashing the password in services/user_service: {}", error_message);
@@ -77,7 +76,7 @@ pub async fn register_user(pool: &Pool<Postgres>, user_email:String, user_passwo
     user_repo::create_user(&pool, &user_email, &hashed_password).await
 }
 
-pub async fn login_user(pool: Pool<Postgres>, user_identifier: String, user_password: String) -> Result<String, UserLoginError> {
+pub async fn login_user(pool: &Pool<Postgres>, auth_config: AuthConfig, user_identifier: String, user_password: String) -> Result<String, UserLoginError> {
 
     let user = {
         if looks_like_email(user_identifier.as_str()) {
@@ -93,7 +92,7 @@ pub async fn login_user(pool: Pool<Postgres>, user_identifier: String, user_pass
             match verify_password(user_password.as_str(), valid_user.hashed_password.as_str()) {
                 Ok(result) => {
                     if result {
-                        let _access_token = create_access_token(valid_user.id)?;
+                        let _access_token = create_access_token(valid_user.id, &auth_config)?;
                         Ok(_access_token)
                     }
                     else {
