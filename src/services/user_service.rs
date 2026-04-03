@@ -25,7 +25,7 @@ fn create_access_token(user_id: Uuid, auth_config: &AuthConfig) -> Result<String
 
     let expiration: usize = chrono::Utc::now()
         .checked_add_signed(chrono::Duration::hours(auth_config.access_token_expiration_time))
-        .expect("Invalid timestamp.")
+        .ok_or(UserLoginError::TokenCreationError)?
         .timestamp() as usize;
 
     let claims: Claims = Claims {
