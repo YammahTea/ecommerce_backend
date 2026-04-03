@@ -8,7 +8,7 @@ use axum::{Router, routing::get};
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use axum::http::StatusCode;
-use axum::middleware::from_fn;
+use axum::middleware::{from_fn_with_state};
 use axum::response::IntoResponse;
 use sqlx::{Executor, Pool, Postgres};
 use axum::routing::post;
@@ -36,10 +36,9 @@ async fn main() {
 
 
 fn app (state: AppState) -> Router {
-    let protected_routes = protected_routes().layer(from_fn(auth_middleware));
+    let protected_routes = protected_routes().layer(from_fn_with_state(state.clone(), auth_middleware));
     let unprotected_routes = unprotected_routes();
 
-    // TODO: Add AppState struct and load pool and config there when the app is created
     Router::new()
         .merge(protected_routes)
         .merge(unprotected_routes)

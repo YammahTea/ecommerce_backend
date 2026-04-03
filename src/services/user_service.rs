@@ -47,8 +47,8 @@ fn create_access_token(user_id: Uuid, auth_config: &AuthConfig) -> Result<String
     Ok(token)
 }
 
-pub fn verify_access_token(token: &str) -> Result<Claims, AuthMiddlewareError>  {
-    let secret = AuthConfig::default().jwt_secret;
+pub fn verify_access_token(token: &str, auth_config: &AuthConfig) -> Result<Claims, AuthMiddlewareError>  {
+    let secret = &auth_config.jwt_secret;
 
     match decode(&token, &DecodingKey::from_secret(secret.as_bytes()), &Validation::default()) {
         Err(_) => Err(AuthMiddlewareError::InvalidToken),

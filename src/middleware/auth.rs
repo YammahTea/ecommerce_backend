@@ -1,10 +1,11 @@
-use axum::extract::Request;
+use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::IntoResponse;
+use crate::models::config::AppState;
 use crate::models::error::{AuthMiddlewareError};
 use crate::services::user_service::verify_access_token;
 
-pub async fn auth_middleware(mut request: Request, next: Next) -> Result<impl IntoResponse, AuthMiddlewareError> {
+pub async fn auth_middleware(State(state): State<AppState>, mut request: Request, next: Next) -> Result<impl IntoResponse, AuthMiddlewareError> {
 
     // Find the authorization header in the request
     let header = request.headers().get("authorization").ok_or(AuthMiddlewareError::MissingCredentials)?;
@@ -16,7 +17,7 @@ pub async fn auth_middleware(mut request: Request, next: Next) -> Result<impl In
 
     let clean_token = auth_header.strip_prefix("Bearer ").ok_or(AuthMiddlewareError::InvalidToken)?;
 
-    let claims = verify_access_token(clean_token)?;
+    let claims = verify_access_token(clean_token, &state.auth_config)?;
     request.extensions_mut().insert(claims);
     Ok(next.run(request).await)
 

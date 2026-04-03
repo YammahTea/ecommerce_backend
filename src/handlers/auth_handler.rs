@@ -2,7 +2,6 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
-use sqlx::{Pool, Postgres};
 use email_address::EmailAddress;
 use crate::models::config::AppState;
 use crate::models::error::{UserCreationError, UserLoginError};
