@@ -20,7 +20,7 @@ fn looks_like_email(mail: &str) -> bool {
     mail.contains("@")
 }
 
-fn create_access_token(user_id: Uuid) -> String {
+fn create_access_token(user_id: Uuid) -> Result<String, UserLoginError> {
 
     let user_auth_config:AuthConfig = AuthConfig::default();
 
@@ -40,9 +40,12 @@ fn create_access_token(user_id: Uuid) -> String {
         &Header::default(),
         &claims,
         &EncodingKey::from_secret(secret.as_bytes())
-    ).unwrap();
+    ).map_err(|error_message| {
+        eprintln!("Error occurred while creating the token: {}", error_message);
+        UserLoginError::TokenCreationError
+    })?;
 
-    token
+    Ok(token)
 }
 
 pub fn verify_access_token(token: &str) -> Result<Claims, AuthMiddlewareError>  {
@@ -90,7 +93,7 @@ pub async fn login_user(pool: Pool<Postgres>, user_identifier: String, user_pass
             match verify_password(user_password.as_str(), valid_user.hashed_password.as_str()) {
                 Ok(result) => {
                     if result {
-                        let _access_token = create_access_token(valid_user.id);
+                        let _access_token = create_access_token(valid_user.id)?;
                         Ok(_access_token)
                     }
                     else {
