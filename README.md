@@ -100,4 +100,5 @@ cargo run
 For automatic reloading during development (recommended), install and use cargo-watch:
 ```text
 cargo install cargo-watch
-cargo watch -x run```
+cargo watch -x run
+```
