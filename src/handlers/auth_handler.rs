@@ -30,6 +30,6 @@ pub async fn register(State(state): State<AppState>,
 
 pub async fn login(State(state): State<AppState>,
                    Json(user_payload): Json<LoginRequest>) -> Result<impl IntoResponse, UserLoginError> {
-    let success_message = login_user(state.pool, state.auth_config, user_payload.identifier, user_payload.password).await?;
+    let success_message = login_user(&state.pool, state.auth_config, user_payload.identifier, user_payload.password).await?;
     Ok((StatusCode::OK, success_message).into_response())
 }
