@@ -14,24 +14,28 @@ use sqlx::{Executor, Pool, Postgres};
 use axum::routing::post;
 use crate::handlers::auth_handler::{login, register};
 use crate::middleware::auth::auth_middleware;
-use crate::models::config::DatabaseConfig;
+use crate::models::auth::AuthConfig;
+use crate::models::config::{AppState, DatabaseConfig};
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
 
-    let config:DatabaseConfig = DatabaseConfig::default();
-    let pool: Pool<Postgres> = create_pool_from_env(&config).await;
+    let database_config: DatabaseConfig = DatabaseConfig::default();
+    let pool: Pool<Postgres> = create_pool_from_env(&database_config).await;
+    let auth_config: AuthConfig = AuthConfig::default();
+    let state = AppState { pool, auth_config };
+
     println!("Successfully connected to database!");
 
-    let app = app(pool);
+    let app = app(state);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("Listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
 
 
-fn app (pool: Pool<Postgres>) -> Router {
+fn app (state: AppState) -> Router {
     let protected_routes = protected_routes().layer(from_fn(auth_middleware));
     let unprotected_routes = unprotected_routes();
 
@@ -39,15 +43,15 @@ fn app (pool: Pool<Postgres>) -> Router {
     Router::new()
         .merge(protected_routes)
         .merge(unprotected_routes)
-        .with_state(pool)
+        .with_state(state)
 }
 
-fn protected_routes() -> Router<Pool<Postgres>> {
+fn protected_routes() -> Router<AppState> {
     Router::new()
         .route("/health", get(health_check))
 }
 
-fn unprotected_routes() -> Router<Pool<Postgres>> {
+fn unprotected_routes() -> Router<AppState> {
     Router::new()
         .route("/user/register", post(register))
         .route("/user/login", post(login))
