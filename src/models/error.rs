@@ -43,3 +43,23 @@ impl IntoResponse for UserLoginError {
         body.into_response()
     }
 }
+
+
+#[derive(Debug)]
+pub enum AuthMiddlewareError {
+    MissingCredentials, // No token
+    InvalidToken // Token expired
+}
+
+impl IntoResponse for AuthMiddlewareError {
+    fn into_response(self) -> Response {
+        let body = match self {
+
+            AuthMiddlewareError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid token."),
+            AuthMiddlewareError::MissingCredentials => (StatusCode::BAD_REQUEST, "Missing credentials.")
+
+        };
+
+        body.into_response()
+    }
+}

@@ -1,3 +1,4 @@
 pub mod user;
-pub mod database_config;
+pub mod config;
 pub mod error;
+pub mod auth;
