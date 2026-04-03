@@ -2,22 +2,25 @@ pub mod models;
 pub mod services;
 pub mod repositories;
 pub mod handlers;
+pub mod middleware;
 
 use axum::{Router, routing::get};
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use axum::http::StatusCode;
+use axum::middleware::from_fn;
 use axum::response::IntoResponse;
 use sqlx::{Executor, Pool, Postgres};
 use axum::routing::post;
 use crate::handlers::auth_handler::{login, register};
-use crate::models::database_config::DatabaseConfig;
+use crate::middleware::auth::auth_middleware;
+use crate::models::config::DatabaseConfig;
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
 
-    let config = DatabaseConfig::default();
+    let config:DatabaseConfig = DatabaseConfig::default();
     let pool: Pool<Postgres> = create_pool_from_env(&config).await;
     println!("Successfully connected to database!");
 
@@ -29,11 +32,25 @@ async fn main() {
 
 
 fn app (pool: Pool<Postgres>) -> Router {
+    let protected_routes = protected_routes().layer(from_fn(auth_middleware));
+    let unprotected_routes = unprotected_routes();
+
+    // TODO: Add AppState struct and load pool and config there when the app is created
+    Router::new()
+        .merge(protected_routes)
+        .merge(unprotected_routes)
+        .with_state(pool)
+}
+
+fn protected_routes() -> Router<Pool<Postgres>> {
     Router::new()
         .route("/health", get(health_check))
+}
+
+fn unprotected_routes() -> Router<Pool<Postgres>> {
+    Router::new()
         .route("/user/register", post(register))
         .route("/user/login", post(login))
-        .with_state(pool)
 }
 
 async fn health_check() -> impl IntoResponse {
