@@ -14,7 +14,7 @@ pub async fn insert_product(pool: &Pool<Postgres>, input: &CreateProductRequest)
     sqlx::query_as::<_, Product>(query)
         .bind(&input.name)
         .bind(&input.description)
-        .bind(&input.price)
+        .bind(&input.price_in_cents)
         .bind(&input.stock_quantity)
         .bind(&input.status)
         .fetch_one(pool).await

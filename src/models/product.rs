@@ -7,7 +7,7 @@ pub struct Product {
     pub(crate) id: Uuid,
     pub(crate) name: String,
     pub(crate) description: String,
-    pub(crate) price: i32,
+    pub(crate) price_in_cents: i32,
     pub(crate) stock_quantity: i32,
     pub(crate) status: ProductStatus,
     pub(crate) created_at: DateTime<Utc>,
@@ -29,7 +29,7 @@ pub enum ProductStatus {
 pub struct CreateProductRequest {
     pub(crate) name: String,
     pub(crate) description: String,
-    pub(crate) price: i32,
+    pub(crate) price_in_cents: i32,
     pub(crate) stock_quantity: i32,
     pub(crate) status: ProductStatus
 }
