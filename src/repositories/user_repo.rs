@@ -11,7 +11,6 @@ pub async fn create_user (pool: &Pool<Postgres>,
     let query = r"INSERT INTO users (email, hashed_password) VALUES ($1, $2)";
 
     let result = sqlx::query(query)
-        // note: user ID is already generated in users table (check migration create_users_table.sql file)
         .bind(&user_email)
         .bind(&user_hashed_password)
         .fetch_optional(pool)
@@ -24,7 +23,7 @@ pub async fn create_user (pool: &Pool<Postgres>,
             Err(UserCreationError::UserAlreadyExists)
         },
 
-        Err(e) =>{
+        Err(e) => {
             eprintln!("Error occurred while creating user in repositories/user_repo.rs: {}", e);
             Err(UserCreationError::DatabaseError)
         }
