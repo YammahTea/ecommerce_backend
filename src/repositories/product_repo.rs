@@ -1,5 +1,5 @@
 use sqlx::{Pool, Postgres};
-use crate::models::error::{ProductCreationError, UserCreationError};
+use crate::models::error::{ProductCreationError};
 use crate::models::product::{CreateProductRequest, Product};
 
 pub async fn insert_product(pool: &Pool<Postgres>, input: &CreateProductRequest) -> Result<Product, ProductCreationError> {
