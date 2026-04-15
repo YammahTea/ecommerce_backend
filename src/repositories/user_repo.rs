@@ -8,10 +8,9 @@ pub async fn create_user (pool: &Pool<Postgres>,
 ) -> Result<String, UserCreationError> {
 
 
-    let query = r"INSERT INTO users (email, hashed_password) VALUES ($1, $2)";
+    let query = r#"INSERT INTO users (email, hashed_password) VALUES ($1, $2)"#;
 
     let result = sqlx::query(query)
-        // note: user ID is already generated in users table (check migration create_users_table.sql file)
         .bind(&user_email)
         .bind(&user_hashed_password)
         .fetch_optional(pool)
@@ -24,7 +23,7 @@ pub async fn create_user (pool: &Pool<Postgres>,
             Err(UserCreationError::UserAlreadyExists)
         },
 
-        Err(e) =>{
+        Err(e) => {
             eprintln!("Error occurred while creating user in repositories/user_repo.rs: {}", e);
             Err(UserCreationError::DatabaseError)
         }
@@ -32,7 +31,7 @@ pub async fn create_user (pool: &Pool<Postgres>,
 }
 
 pub async fn get_user_by_email(pool: &Pool<Postgres>, user_email: &str) -> Result<Option<User>, UserLoginError> {
-    let query = r"SELECT * FROM users WHERE email = $1";
+    let query = r#"SELECT * FROM users WHERE email = $1"#;
 
     sqlx::query_as::<_, User>(query)
         .bind(&user_email)
@@ -45,7 +44,7 @@ pub async fn get_user_by_email(pool: &Pool<Postgres>, user_email: &str) -> Resul
 }
 
 pub async fn get_user_by_username(pool: &Pool<Postgres>, username: &str) -> Result<Option<User>, UserLoginError> {
-    let query = r"SELECT * FROM users WHERE username = $1";
+    let query = r#"SELECT * FROM users WHERE username = $1"#;
 
     sqlx::query_as::<_, User>(query)
         .bind(&username)

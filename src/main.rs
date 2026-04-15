@@ -13,6 +13,7 @@ use axum::response::IntoResponse;
 use sqlx::{Executor, Pool, Postgres};
 use axum::routing::post;
 use crate::handlers::auth_handler::{login, register};
+use crate::handlers::product_handler::create_product;
 use crate::middleware::auth::auth_middleware;
 use crate::models::auth::AuthConfig;
 use crate::models::config::{AppState, DatabaseConfig};
@@ -48,6 +49,7 @@ fn app (state: AppState) -> Router {
 fn protected_routes() -> Router<AppState> {
     Router::new()
         .route("/health", get(health_check))
+        .route("/products", post(create_product))
 }
 
 fn unprotected_routes() -> Router<AppState> {
