@@ -4,7 +4,8 @@ use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 use crate::models::auth::{AuthConfig, Claims};
 use crate::repositories::user_repo;
-use crate::models::error::{AuthMiddlewareError, UserCreationError, UserLoginError};
+use crate::errors::user_error::{UserCreationError, UserLoginError};
+use crate::errors::middleware_error::AuthenticationMiddlewareError;
 
 
 fn hash_password(password: &str, auth_config: &AuthConfig) -> BcryptResult<String> {
@@ -20,7 +21,7 @@ fn looks_like_email(mail: &str) -> bool {
     mail.contains("@")
 }
 
-fn create_access_token(user_id: Uuid, auth_config: &AuthConfig) -> Result<String, UserLoginError> {
+fn create_access_token(user_id: Uuid, user_role: String, auth_config: &AuthConfig) -> Result<String, UserLoginError> {
 
 
     let expiration: usize = chrono::Utc::now()
@@ -30,6 +31,7 @@ fn create_access_token(user_id: Uuid, auth_config: &AuthConfig) -> Result<String
 
     let claims: Claims = Claims {
         sub: user_id.to_string(),
+        role: user_role,
         exp: expiration
     };
 
@@ -47,11 +49,11 @@ fn create_access_token(user_id: Uuid, auth_config: &AuthConfig) -> Result<String
     Ok(token)
 }
 
-pub fn verify_access_token(token: &str, auth_config: &AuthConfig) -> Result<Claims, AuthMiddlewareError>  {
+pub fn verify_access_token(token: &str, auth_config: &AuthConfig) -> Result<Claims, AuthenticationMiddlewareError>  {
     let secret = &auth_config.jwt_secret;
 
     match decode(&token, &DecodingKey::from_secret(secret.as_bytes()), &Validation::default()) {
-        Err(_) => Err(AuthMiddlewareError::InvalidToken),
+        Err(_) => Err(AuthenticationMiddlewareError::InvalidToken),
 
         Ok(token_data) => {
             Ok(token_data.claims)
@@ -92,7 +94,7 @@ pub async fn login_user(pool: &Pool<Postgres>, auth_config: AuthConfig, user_ide
             match verify_password(user_password.as_str(), valid_user.hashed_password.as_str()) {
                 Ok(result) => {
                     if result {
-                        let _access_token = create_access_token(valid_user.id, &auth_config)?;
+                        let _access_token = create_access_token(valid_user.id, valid_user.role, &auth_config)?;
                         Ok(_access_token)
                     }
                     else {

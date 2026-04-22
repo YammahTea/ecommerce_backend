@@ -1,5 +1,5 @@
 use sqlx::{Pool, Postgres};
-use crate::models::error::{UserCreationError, UserLoginError};
+use crate::errors::user_error::{UserCreationError, UserLoginError};
 use crate::models::user::User;
 
 pub async fn create_user (pool: &Pool<Postgres>,

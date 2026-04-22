@@ -25,5 +25,6 @@ impl Default for AuthConfig {
 #[derive(Clone)]
 pub struct Claims {
     pub(crate) sub: String,
+    pub(crate) role: String,
     pub(crate) exp: usize
 }
