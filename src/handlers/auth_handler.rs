@@ -4,7 +4,7 @@ use axum::Json;
 use axum::response::IntoResponse;
 use email_address::EmailAddress;
 use crate::models::config::AppState;
-use crate::models::error::{UserCreationError, UserLoginError};
+use crate::errors::user_error::{UserCreationError, UserLoginError};
 use crate::models::user::{LoginRequest, RegisterRequest};
 use crate::services::user_service::{login_user, register_user};
 

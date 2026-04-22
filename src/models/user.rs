@@ -21,6 +21,7 @@ pub struct User {
     pub(crate) email: String,
     pub(crate) username: Option<String>,
     pub(crate) hashed_password: String,
+    pub(crate) role: String,
     pub(crate) created_at: DateTime<Utc>
 }
 

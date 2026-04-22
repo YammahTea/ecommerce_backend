@@ -1,4 +1,3 @@
--- Add migration script here
 CREATE TABLE products (
     -- This is NOT full table implementation, more columns will be added
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

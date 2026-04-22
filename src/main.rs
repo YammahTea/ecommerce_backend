@@ -3,17 +3,19 @@ pub mod services;
 pub mod repositories;
 pub mod handlers;
 pub mod middleware;
+pub mod errors;
 
 use axum::{Router, routing::get};
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use axum::http::StatusCode;
-use axum::middleware::{from_fn_with_state};
+use axum::middleware::{from_fn, from_fn_with_state};
 use axum::response::IntoResponse;
 use sqlx::{Executor, Pool, Postgres};
 use axum::routing::post;
 use crate::handlers::auth_handler::{login, register};
 use crate::handlers::product_handler::create_product;
+use crate::middleware::admin::require_admin;
 use crate::middleware::auth::auth_middleware;
 use crate::models::auth::AuthConfig;
 use crate::models::config::{AppState, DatabaseConfig};
@@ -37,25 +39,36 @@ async fn main() {
 
 
 fn app (state: AppState) -> Router {
-    let protected_routes = protected_routes().layer(from_fn_with_state(state.clone(), auth_middleware));
+    let protected_routes = protected_routes()
+        .layer(from_fn_with_state(state.clone(), auth_middleware));
+
     let unprotected_routes = unprotected_routes();
+
+    let admin_routes = admin_routes()
+        .layer(from_fn(require_admin))
+        .layer(from_fn_with_state(state.clone(), auth_middleware));
 
     Router::new()
         .merge(protected_routes)
         .merge(unprotected_routes)
+        .merge(admin_routes)
         .with_state(state)
 }
 
 fn protected_routes() -> Router<AppState> {
     Router::new()
         .route("/health", get(health_check))
-        .route("/products", post(create_product))
 }
 
 fn unprotected_routes() -> Router<AppState> {
     Router::new()
         .route("/user/register", post(register))
         .route("/user/login", post(login))
+}
+
+fn admin_routes() -> Router<AppState> {
+    Router::new()
+        .route("/products", post(create_product)) // Create products
 }
 
 async fn health_check() -> impl IntoResponse {

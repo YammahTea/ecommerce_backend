@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
 use crate::models::config::AppState;
-use crate::models::error::ProductCreationError;
+use crate::errors::product_error::ProductCreationError;
 use crate::models::product::CreateProductRequest;
 use crate::services::product_service::add_new_product;
 

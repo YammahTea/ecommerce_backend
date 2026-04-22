@@ -1,5 +1,5 @@
 use sqlx::{Pool, Postgres};
-use crate::models::error::ProductCreationError;
+use crate::errors::product_error::ProductCreationError;
 use crate::models::product::{CreateProductRequest, Product};
 use crate::repositories::product_repo::insert_product;
 
