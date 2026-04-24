@@ -5,7 +5,7 @@ use axum::response::{IntoResponse, Response};
 
 #[derive(Debug)]
 pub enum ProductCreationError {
-    // More errors will be added as the product table is full
+    // More errors will be added as the product table grows
     InvalidPrice,
     InvalidStockQuantity,
     InvalidName,
@@ -25,6 +25,22 @@ impl IntoResponse for ProductCreationError {
 
         };
 
+        body.into_response()
+    }
+}
+
+pub enum FetchProductError {
+    ProductNotFound,
+    DatabaseError
+}
+
+impl IntoResponse for FetchProductError {
+    fn into_response(self) -> Response {
+        let body = match self { 
+            FetchProductError::ProductNotFound => (StatusCode::NOT_FOUND, "Product ID does not exist."),
+            FetchProductError::DatabaseError => (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong while fetching products.")
+        };
+        
         body.into_response()
     }
 }
