@@ -33,3 +33,9 @@ pub struct CreateProductRequest {
     pub(crate) stock_quantity: i32,
     pub(crate) status: ProductStatus
 }
+
+#[derive(Deserialize)]
+pub struct ProductPagination {
+    pub(crate) page: Option<u32>,
+    pub(crate) limit: Option<u32>
+}

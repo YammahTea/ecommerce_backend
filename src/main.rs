@@ -14,7 +14,7 @@ use axum::response::IntoResponse;
 use sqlx::{Executor, Pool, Postgres};
 use axum::routing::post;
 use crate::handlers::auth_handler::{login, register};
-use crate::handlers::product_handler::create_product;
+use crate::handlers::product_handler::{create_product, get_all_products, get_product};
 use crate::middleware::admin::require_admin;
 use crate::middleware::auth::auth_middleware;
 use crate::models::auth::AuthConfig;
@@ -64,6 +64,9 @@ fn unprotected_routes() -> Router<AppState> {
     Router::new()
         .route("/user/register", post(register))
         .route("/user/login", post(login))
+
+        .route("/products", get(get_all_products))
+        .route("/products/{id}", get(get_product))
 }
 
 fn admin_routes() -> Router<AppState> {
