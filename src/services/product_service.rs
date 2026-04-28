@@ -1,19 +1,16 @@
 use sqlx::{Pool, Postgres};
 use uuid::Uuid;
-use crate::errors::product_error::{FetchProductError, ProductCreationError};
-use crate::models::product::{CreateProductRequest, Product, ProductPagination};
-use crate::repositories::product_repo::{fetch_product_by_id, fetch_products, insert_product};
+use crate::errors::product_error::{FetchProductError, CreateProductError, UpdateProductError, SoftDeleteProductError};
+use crate::models::product::{CreateProductRequest, Product, ProductPagination, UpdateProductRequest};
+use crate::repositories::product_repo::{fetch_product_by_id, fetch_products, insert_product, soft_delete_product, update_product};
 
 // Note: "Admin" comment above a function name indicates
 // that the service is used by an admin only endpoint
 
 // Admin
-pub async fn add_new_product(product_payload: &CreateProductRequest,  pool: &Pool<Postgres>) -> Result<Product, ProductCreationError> {
+pub async fn add_new_product(product_payload: &CreateProductRequest,  pool: &Pool<Postgres>) -> Result<Product, CreateProductError> {
 
-    if product_payload.name.is_empty() { return Err(ProductCreationError::InvalidName) }
-    if product_payload.description.is_empty() { return Err(ProductCreationError::InvalidDescription) }
-    if product_payload.price_in_cents < 0 { return Err(ProductCreationError::InvalidPrice) }
-    if product_payload.stock_quantity < 0 { return Err(ProductCreationError::InvalidStockQuantity) }
+    product_payload.validate()?;
 
     let created_product = insert_product(pool, product_payload).await?;
     Ok(created_product)
@@ -45,3 +42,25 @@ pub async fn get_single_product(product_id: Uuid, pool: &Pool<Postgres>) -> Resu
         Some(fetched_product) => { Ok(fetched_product) }
     }
 }
+
+// Admin
+pub async fn edit_product(product_id: Uuid, product_info: &UpdateProductRequest, pool: &Pool<Postgres>) -> Result<Product, UpdateProductError> {
+
+    product_info.validate()?;
+
+    let product = update_product(pool, product_id, product_info).await?;
+
+    match product {
+        None => { Err(UpdateProductError::ProductNotFound) }
+        Some(updated_product) => { Ok(updated_product) }
+    }
+
+}
+
+// Admin
+pub async fn remove_product(product_id: Uuid, pool: &Pool<Postgres>) -> Result<String, SoftDeleteProductError> {
+
+    let product_to_delete = soft_delete_product(pool, product_id).await;
+    product_to_delete
+}
+

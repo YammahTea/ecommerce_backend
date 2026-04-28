@@ -12,9 +12,9 @@ use axum::http::StatusCode;
 use axum::middleware::{from_fn, from_fn_with_state};
 use axum::response::IntoResponse;
 use sqlx::{Executor, Pool, Postgres};
-use axum::routing::post;
+use axum::routing::{delete, patch, post};
 use crate::handlers::auth_handler::{login, register};
-use crate::handlers::product_handler::{create_product, get_all_products, get_product};
+use crate::handlers::product_handler::{create_product, delete_product, get_all_products, get_product, update_product};
 use crate::middleware::admin::require_admin;
 use crate::middleware::auth::auth_middleware;
 use crate::models::auth::AuthConfig;
@@ -51,7 +51,7 @@ fn app (state: AppState) -> Router {
     Router::new()
         .merge(protected_routes)
         .merge(unprotected_routes)
-        .merge(admin_routes)
+        .nest("/admin", admin_routes)
         .with_state(state)
 }
 
@@ -71,7 +71,9 @@ fn unprotected_routes() -> Router<AppState> {
 
 fn admin_routes() -> Router<AppState> {
     Router::new()
-        .route("/products", post(create_product)) // Create products
+        .route("/products", post(create_product))
+        .route("/products/{id}", patch(update_product))
+        .route("/products/{id}", delete(delete_product))
 }
 
 async fn health_check() -> impl IntoResponse {
