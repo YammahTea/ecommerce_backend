@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::errors::product_error::{CreateProductError, ProductValidationError, UpdateProductError};
+use crate::errors::product_error::{ProductValidationError};
 use crate::errors::product_error::ProductValidationError::{InvalidDescription, InvalidName, InvalidPrice, InvalidStockQuantity};
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
