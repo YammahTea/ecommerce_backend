@@ -1,9 +1,9 @@
 use sqlx::{Pool, Postgres};
 use uuid::Uuid;
-use crate::errors::product_error::{FetchProductError, ProductCreationError};
-use crate::models::product::{CreateProductRequest, Product};
+use crate::errors::product_error::{FetchProductError, CreateProductError, UpdateProductError, SoftDeleteProductError};
+use crate::models::product::{CreateProductRequest, Product, UpdateProductRequest};
 
-pub async fn insert_product(pool: &Pool<Postgres>, input: &CreateProductRequest) -> Result<Product, ProductCreationError> {
+pub async fn insert_product(pool: &Pool<Postgres>, input: &CreateProductRequest) -> Result<Product, CreateProductError> {
     let query = r#"
         INSERT INTO products
         (name, description, price_in_cents, stock_quantity, status)
@@ -21,7 +21,7 @@ pub async fn insert_product(pool: &Pool<Postgres>, input: &CreateProductRequest)
         .fetch_one(pool).await
         .map_err(|e| {
             eprintln!("Error occurred while creating a product in repositories/product_repo: {}", e);
-            ProductCreationError::DatabaseError
+            CreateProductError::DatabaseError
         })
 
 
@@ -63,4 +63,55 @@ pub async fn fetch_product_by_id(pool: &Pool<Postgres>, product_id: Uuid) -> Res
             eprintln!("Error occurred while fetching one product by 'id = {product_id}' in repositories/product_repo: {}", e);
             FetchProductError::DatabaseError
         })
+}
+
+pub async fn update_product(pool: &Pool<Postgres>, product_id:Uuid, input: &UpdateProductRequest) -> Result<Option<Product>, UpdateProductError> {
+    let query = r#"
+        UPDATE products
+        SET
+        name = COALESCE($1, name),
+        description = COALESCE($2, description),
+        price_in_cents = COALESCE($3, price_in_cents),
+        stock_quantity = COALESCE($4, stock_quantity),
+        status = COALESCE($5, status),
+        updated_at = NOW()
+        WHERE id = $6
+        RETURNING *
+    "#;
+
+    sqlx::query_as::<_, Product>(query)
+        .bind(&input.name)
+        .bind(&input.description)
+        .bind(&input.price_in_cents)
+        .bind(&input.stock_quantity)
+        .bind(&input.status)
+        .bind(&product_id)
+        .fetch_optional(pool).await
+        .map_err(|e| {
+            eprintln!("Error occured while updating product in repositories/product_repo: {e}");
+            UpdateProductError::DatabaseError
+        })
+
+}
+
+pub async fn soft_delete_product(pool: &Pool<Postgres>, product_id:Uuid) -> Result<String, SoftDeleteProductError> {
+
+    let query = r#"
+        UPDATE products
+        SET
+        deleted_at = NOW(),
+        status = 'archived'
+        WHERE id = $1
+    "#;
+
+    let result = sqlx::query(query)
+        .bind(&product_id)
+        .execute(pool)
+        .await?;
+
+    if result.rows_affected() == 0 {
+        return Err(SoftDeleteProductError::ProductNotFound)
+    }
+
+    Ok("Product deleted successfully.".to_string())
 }
