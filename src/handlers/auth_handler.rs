@@ -3,11 +3,15 @@ use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
 use email_address::EmailAddress;
+use tracing::instrument;
 use crate::models::config::AppState;
 use crate::errors::user_error::{UserCreationError, UserLoginError};
 use crate::models::user::{LoginRequest, RegisterRequest};
 use crate::services::user_service::{login_user, register_user};
 
+// NOTE: using instrument, please skip everything, fields are logged in the "services" layer ONLY
+
+#[instrument(skip(state, user_payload))]
 pub async fn register(State(state): State<AppState>,
                 Json(user_payload): Json<RegisterRequest>) -> Result<impl IntoResponse, UserCreationError> {
 
@@ -27,6 +31,7 @@ pub async fn register(State(state): State<AppState>,
 
 }
 
+#[instrument(skip(state, user_payload))]
 pub async fn login(State(state): State<AppState>,
                    Json(user_payload): Json<LoginRequest>) -> Result<impl IntoResponse, UserLoginError> {
     let success_message = login_user(&state.pool, state.auth_config, user_payload.identifier, user_payload.password).await?;

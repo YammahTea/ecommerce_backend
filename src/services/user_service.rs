@@ -1,12 +1,15 @@
 use bcrypt::{BcryptResult};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use sqlx::{Pool, Postgres};
+use tracing::{error, instrument};
 use uuid::Uuid;
 use crate::models::auth::{AuthConfig, Claims};
 use crate::repositories::user_repo;
 use crate::errors::user_error::{UserCreationError, UserLoginError};
 use crate::errors::middleware_error::AuthenticationMiddlewareError;
 
+// NOTE: use instrument on "async" functions ONLY
+// NOTE: using instrument, fields are logged in the "services" layer ONLY
 
 fn hash_password(password: &str, auth_config: &AuthConfig) -> BcryptResult<String> {
     let bcrypt_cost:u32 = auth_config.bcrypt_cost;
@@ -42,14 +45,14 @@ fn create_access_token(user_id: Uuid, user_role: String, auth_config: &AuthConfi
         &claims,
         &EncodingKey::from_secret(secret.as_bytes())
     ).map_err(|error_message| {
-        eprintln!("Error occurred while creating the token: {}", error_message);
+        error!(error = ?error_message, "Error occurred while creating the token");
         UserLoginError::TokenCreationError
     })?;
 
     Ok(token)
 }
 
-pub fn verify_access_token(token: &str, auth_config: &AuthConfig) -> Result<Claims, AuthenticationMiddlewareError>  {
+pub(crate) fn verify_access_token(token: &str, auth_config: &AuthConfig) -> Result<Claims, AuthenticationMiddlewareError>  {
     let secret = &auth_config.jwt_secret;
 
     match decode(&token, &DecodingKey::from_secret(secret.as_bytes()), &Validation::default()) {
@@ -63,13 +66,14 @@ pub fn verify_access_token(token: &str, auth_config: &AuthConfig) -> Result<Clai
 }
 
 
+#[instrument(skip(pool, auth_config, user_password), fields(user_email = %user_email))]
 pub async fn register_user(pool: &Pool<Postgres>, auth_config: AuthConfig, user_email:String, user_password: String) -> Result<String, UserCreationError> {
 
     let hashed_password = {
         match hash_password(&user_password, &auth_config) {
             Ok(result) => result,
             Err(error_message) => {
-                eprintln!("Error occurred while hashing the password in services/user_service: {}", error_message);
+                error!(err = ?error_message, "Error occurred while hashing the password");
                 return Err(UserCreationError::HashingError)
             }
         }
@@ -78,6 +82,8 @@ pub async fn register_user(pool: &Pool<Postgres>, auth_config: AuthConfig, user_
     user_repo::create_user(&pool, &user_email, &hashed_password).await
 }
 
+
+#[instrument(skip(pool, auth_config, user_password), fields(user_identifier = %user_identifier))]
 pub async fn login_user(pool: &Pool<Postgres>, auth_config: AuthConfig, user_identifier: String, user_password: String) -> Result<String, UserLoginError> {
 
     let user = {
@@ -101,8 +107,8 @@ pub async fn login_user(pool: &Pool<Postgres>, auth_config: AuthConfig, user_ide
                         Err(UserLoginError::InvalidCredentials)
                     }
                 },
-                Err(e) => {
-                    eprintln!("Something went wrong while verifying the password: {}", e);
+                Err(error_message) => {
+                    error!(error = ?error_message, "Something went wrong while verifying the password");
                     Err(UserLoginError::InvalidCredentials)
                 }
             }

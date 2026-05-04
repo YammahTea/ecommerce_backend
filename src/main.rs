@@ -6,13 +6,23 @@ pub mod middleware;
 pub mod errors;
 
 use axum::{Router, routing::get};
+use axum::body::Body;
+use axum::extract::Request;
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use axum::http::StatusCode;
 use axum::middleware::{from_fn, from_fn_with_state};
-use axum::response::IntoResponse;
+use axum::response::{IntoResponse, Response};
 use sqlx::{Executor, Pool, Postgres};
 use axum::routing::{delete, patch, post};
+use std::time::Duration;
+use tracing::{error, info, instrument, Span};
+use tracing_appender::rolling;
+use tracing_subscriber::{EnvFilter, Layer};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tower_http::{trace::{TraceLayer, DefaultMakeSpan}};
+use tower_http::classify::ServerErrorsFailureClass;
 use crate::handlers::auth_handler::{login, register};
 use crate::handlers::product_handler::{create_product, delete_product, get_all_products, get_product, update_product};
 use crate::middleware::admin::require_admin;
@@ -23,17 +33,19 @@ use crate::models::config::{AppState, DatabaseConfig};
 #[tokio::main]
 async fn main() {
     dotenv().ok();
+    let _guard = init_tracing();
 
     let database_config: DatabaseConfig = DatabaseConfig::default();
     let pool: Pool<Postgres> = create_pool_from_env(&database_config).await;
     let auth_config: AuthConfig = AuthConfig::default();
     let state = AppState { pool, auth_config };
 
-    println!("Successfully connected to database!");
 
-    let app = app(state);
+    info!("Successfully connected to database!");
+
+    let app = add_tracing_layer(app(state));
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    println!("Listening on {}", listener.local_addr().unwrap());
+    info!("Listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
 
@@ -82,9 +94,10 @@ async fn health_check() -> impl IntoResponse {
 }
 
 // Connect to database
+#[instrument(skip(config))]
 async fn create_pool_from_env(config: &DatabaseConfig) -> Pool<Postgres> {
 
-    println!("Connecting to database...");
+    info!("Connecting to database...");
 
     PgPoolOptions::new()
         .max_connections(config.max_connections)
@@ -105,4 +118,43 @@ async fn create_pool_from_env(config: &DatabaseConfig) -> Pool<Postgres> {
         .await
         .expect("Failed to connect to database, please check if the database is running or if the database url is correct")
 
+}
+
+fn init_tracing() -> impl Drop {
+    let file_appender = rolling::daily("logs/", "ecommerce");
+    let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
+
+    let terminal_layer = tracing_subscriber::fmt::layer()
+        .with_filter(EnvFilter::from_default_env());
+
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_writer(file_writer)
+        .with_ansi(false)
+        .with_filter(EnvFilter::new("error"));
+
+    tracing_subscriber::registry()
+        .with(terminal_layer)
+        .with(file_layer)
+        .init();
+
+    guard
+}
+
+fn add_tracing_layer(router: Router) -> Router{
+    router.layer(
+        TraceLayer::new_for_http()
+            .make_span_with(
+                DefaultMakeSpan::new().include_headers(true)
+            )
+            .on_request(|request: &Request<Body>, _span: &Span| {
+                info!("request: {} {}", request.method(), request.uri().path())
+
+            })            .on_response(|response: &Response<Body>, latency: Duration, _span: &Span|{
+                info!("response: {}, latency {:?}", response.status(), latency)
+            })
+            .on_failure(|error: ServerErrorsFailureClass, _latency: Duration, _span: &Span|{
+                error!(error = ?error, latency = ?_latency, "Error")
+            })
+
+    )
 }

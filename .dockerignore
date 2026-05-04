@@ -4,3 +4,4 @@ target/
 *.env
 postgres_data/
 notes.txt
+logs/
