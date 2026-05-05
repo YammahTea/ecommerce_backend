@@ -75,9 +75,9 @@ ACCESS_TOKEN_EXPIRE=24
 
 # Password Hashing (do NOT change after initial setup) (any number between 4 and 31)
 BCRYPT_COST=10
-# recommended to set it at 10, the higher you set it, 
+# recommended to set it at 12 or higher, the higher you set it, 
 # the higher the time it will take to create the user 
-
+# use 10 for development but change it to 12 for production
 
 # Secret key for JWT (change this to a strong random string in production)
 JWT_SECRET=your_super_secret_jwt_key_here_change_in_production
