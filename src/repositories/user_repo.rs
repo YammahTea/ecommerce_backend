@@ -1,7 +1,11 @@
 use sqlx::{Pool, Postgres};
+use tracing::{error, instrument};
 use crate::errors::user_error::{UserCreationError, UserLoginError};
 use crate::models::user::User;
 
+// NOTE: using instrument, please skip everything, fields are logged in the "services" layer ONLY
+
+#[instrument(skip(pool, user_hashed_password, user_email))]
 pub async fn create_user (pool: &Pool<Postgres>,
                           user_email: &str,
                           user_hashed_password: &str
@@ -23,13 +27,14 @@ pub async fn create_user (pool: &Pool<Postgres>,
             Err(UserCreationError::UserAlreadyExists)
         },
 
-        Err(e) => {
-            eprintln!("Error occurred while creating user in repositories/user_repo.rs: {}", e);
+        Err(error_message) => {
+            error!(error = ?error_message, "Error occurred while creating user");
             Err(UserCreationError::DatabaseError)
         }
     }
 }
 
+#[instrument(skip(pool, user_email))]
 pub async fn get_user_by_email(pool: &Pool<Postgres>, user_email: &str) -> Result<Option<User>, UserLoginError> {
     let query = r#"SELECT * FROM users WHERE email = $1"#;
 
@@ -37,12 +42,13 @@ pub async fn get_user_by_email(pool: &Pool<Postgres>, user_email: &str) -> Resul
         .bind(&user_email)
         .fetch_optional(pool)
         .await
-        .map_err(|e| {
-            eprintln!("Error occurred while fetching user by email in repositories/user_repo: {}", e);
+        .map_err(|error_message| {
+            error!(error = ?error_message, "Error occurred while fetching user by email");
             UserLoginError::DatabaseError
         })
 }
 
+#[instrument(skip(pool, username))]
 pub async fn get_user_by_username(pool: &Pool<Postgres>, username: &str) -> Result<Option<User>, UserLoginError> {
     let query = r#"SELECT * FROM users WHERE username = $1"#;
 
@@ -50,8 +56,8 @@ pub async fn get_user_by_username(pool: &Pool<Postgres>, username: &str) -> Resu
         .bind(&username)
         .fetch_optional(pool)
         .await
-        .map_err(|e| {
-            eprintln!("Error occurred while fetching user by username in repositories/user_repo: {}", e);
+        .map_err(|error_message| {
+            error!(error = ?error_message, "Error occurred while fetching user by username");
             UserLoginError::DatabaseError
         })
 }

@@ -74,10 +74,23 @@ DB_IDLE_TIMEOUT=300
 ACCESS_TOKEN_EXPIRE=24
 
 # Password Hashing (do NOT change after initial setup) (any number between 4 and 31)
-BCRYPT_COST=12
+BCRYPT_COST=10
+# recommended to set it at 12 or higher, the higher you set it, 
+# the higher the time it will take to create the user 
+# use 10 for development but change it to 12 for production
 
 # Secret key for JWT (change this to a strong random string in production)
 JWT_SECRET=your_super_secret_jwt_key_here_change_in_production
+
+# Use the one you want for your current needs
+# recommended for daily dev — info from libs, debug from code
+RUST_LOG='info,ecommerce_backend=debug'
+
+# everything — very noisy
+#RUST_LOG='debug'
+
+# errors only
+#RUST_LOG='error'
 ```
 
 #### 3. Database

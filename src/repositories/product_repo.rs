@@ -1,8 +1,12 @@
 use sqlx::{Pool, Postgres};
+use tracing::{error, instrument};
 use uuid::Uuid;
 use crate::errors::product_error::{FetchProductError, CreateProductError, UpdateProductError, SoftDeleteProductError};
 use crate::models::product::{CreateProductRequest, Product, UpdateProductRequest};
 
+// NOTE: using instrument, please skip everything, fields are logged in the "services" layer ONLY
+
+#[instrument(skip(pool, input))]
 pub async fn insert_product(pool: &Pool<Postgres>, input: &CreateProductRequest) -> Result<Product, CreateProductError> {
     let query = r#"
         INSERT INTO products
@@ -19,14 +23,15 @@ pub async fn insert_product(pool: &Pool<Postgres>, input: &CreateProductRequest)
         .bind(&input.stock_quantity)
         .bind(&input.status)
         .fetch_one(pool).await
-        .map_err(|e| {
-            eprintln!("Error occurred while creating a product in repositories/product_repo: {}", e);
+        .map_err(|error_message| {
+            error!(error = ?error_message, "Error occurred while creating a product");
             CreateProductError::DatabaseError
         })
 
 
 }
 
+#[instrument(skip(pool, offset, limit))]
 pub async fn fetch_products(pool: &Pool<Postgres>, offset: i32, limit: i32) -> Result<Vec<Product>, FetchProductError> {
 
     let query = r#"
@@ -41,13 +46,14 @@ pub async fn fetch_products(pool: &Pool<Postgres>, offset: i32, limit: i32) -> R
         .bind(&limit)
         .bind(&offset)
         .fetch_all(pool).await
-        .map_err(|e| {
-            eprintln!("Error occured while fetching all products in repositories/product_repo: {}", e);
+        .map_err(|error_message| {
+            error!(error = ?error_message, limit = %limit, offset = %offset, "Error occurred while fetching products");
             FetchProductError::DatabaseError
         })
 
 }
 
+#[instrument(skip(pool, product_id))]
 pub async fn fetch_product_by_id(pool: &Pool<Postgres>, product_id: Uuid) -> Result<Option<Product>, FetchProductError> {
 
     let query = r#"
@@ -59,12 +65,13 @@ pub async fn fetch_product_by_id(pool: &Pool<Postgres>, product_id: Uuid) -> Res
     sqlx::query_as::<_, Product>(query)
         .bind(&product_id)
         .fetch_optional(pool).await
-        .map_err(|e| {
-            eprintln!("Error occurred while fetching one product by 'id = {product_id}' in repositories/product_repo: {}", e);
+        .map_err(|error_message| {
+            error!(error = ?error_message, product_id = %product_id, "Error occurred while fetching product");
             FetchProductError::DatabaseError
         })
 }
 
+#[instrument(skip(pool, product_id, input))]
 pub async fn update_product(pool: &Pool<Postgres>, product_id:Uuid, input: &UpdateProductRequest) -> Result<Option<Product>, UpdateProductError> {
     let query = r#"
         UPDATE products
@@ -87,13 +94,14 @@ pub async fn update_product(pool: &Pool<Postgres>, product_id:Uuid, input: &Upda
         .bind(&input.status)
         .bind(&product_id)
         .fetch_optional(pool).await
-        .map_err(|e| {
-            eprintln!("Error occured while updating product in repositories/product_repo: {e}");
+        .map_err(|error_message| {
+            error!(error = ?error_message, "Error occurred while updating product");
             UpdateProductError::DatabaseError
         })
 
 }
 
+#[instrument(skip(pool, product_id))]
 pub async fn soft_delete_product(pool: &Pool<Postgres>, product_id:Uuid) -> Result<String, SoftDeleteProductError> {
 
     let query = r#"

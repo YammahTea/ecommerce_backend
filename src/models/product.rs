@@ -47,7 +47,7 @@ impl CreateProductRequest {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct ProductPagination {
     pub(crate) page: Option<u32>,
     pub(crate) limit: Option<u32>
