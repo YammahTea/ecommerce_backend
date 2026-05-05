@@ -5,7 +5,8 @@ pub mod handlers;
 pub mod middleware;
 pub mod errors;
 
-use axum::{Router, routing::get};
+use std::sync::Arc;
+use axum::{Router, routing::get, http};
 use axum::body::Body;
 use axum::extract::Request;
 use dotenvy::dotenv;
@@ -23,6 +24,8 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tower_http::{trace::{TraceLayer, DefaultMakeSpan}};
 use tower_http::classify::ServerErrorsFailureClass;
+use tower_http::sensitive_headers::SetSensitiveHeadersLayer;
+use http::header;
 use crate::handlers::auth_handler::{login, register};
 use crate::handlers::product_handler::{create_product, delete_product, get_all_products, get_product, update_product};
 use crate::middleware::admin::require_admin;
@@ -140,21 +143,33 @@ fn init_tracing() -> impl Drop {
     guard
 }
 
-fn add_tracing_layer(router: Router) -> Router{
-    router.layer(
-        TraceLayer::new_for_http()
-            .make_span_with(
-                DefaultMakeSpan::new().include_headers(true)
-            )
-            .on_request(|request: &Request<Body>, _span: &Span| {
-                info!("request: {} {}", request.method(), request.uri().path())
+fn add_tracing_layer(router: Router) -> Router {
 
-            })            .on_response(|response: &Response<Body>, latency: Duration, _span: &Span|{
-                info!("response: {}, latency {:?}", response.status(), latency)
-            })
-            .on_failure(|error: ServerErrorsFailureClass, _latency: Duration, _span: &Span|{
-                error!(error = ?error, latency = ?_latency, "Error")
-            })
+    let headers: Arc<[_]> = Arc::new([
+        header::AUTHORIZATION,
+        header::PROXY_AUTHENTICATE,
+        header::COOKIE,
+        header::SET_COOKIE,
+    ]);
 
-    )
+    router
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(
+                    DefaultMakeSpan::new().include_headers(true)
+                )
+                .on_request(|request: &Request<Body>, _span: &Span| {
+                    info!("request: {} {}", request.method(), request.uri().path())
+
+                })            .on_response(|response: &Response<Body>, latency: Duration, _span: &Span|{
+                    info!("response: {}, latency {:?}", response.status(), latency)
+                })
+                .on_failure(|error: ServerErrorsFailureClass, _latency: Duration, _span: &Span|{
+                    error!(error = ?error, latency = ?_latency, "Error")
+                })
+
+        )
+        .layer(SetSensitiveHeadersLayer::from_shared(Arc::clone(&headers)))
+        // for both request and response
+
 }
