@@ -24,7 +24,7 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tower_http::{trace::{TraceLayer, DefaultMakeSpan}};
 use tower_http::classify::ServerErrorsFailureClass;
-use tower_http::sensitive_headers::SetSensitiveHeadersLayer;
+use tower_http::sensitive_headers::{SetSensitiveHeadersLayer, SetSensitiveRequestHeadersLayer, SetSensitiveResponseHeadersLayer};
 use http::header;
 use crate::handlers::auth_handler::{login, register};
 use crate::handlers::product_handler::{create_product, delete_product, get_all_products, get_product, update_product};
@@ -153,6 +153,7 @@ fn add_tracing_layer(router: Router) -> Router {
     ]);
 
     router
+        .layer(SetSensitiveRequestHeadersLayer::from_shared(Arc::clone(&headers)))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(
@@ -169,7 +170,6 @@ fn add_tracing_layer(router: Router) -> Router {
                 })
 
         )
-        .layer(SetSensitiveHeadersLayer::from_shared(Arc::clone(&headers)))
-        // for both request and response
+        .layer(SetSensitiveResponseHeadersLayer::from_shared(headers))
 
 }
