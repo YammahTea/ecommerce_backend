@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use axum::extract::{State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
@@ -7,7 +6,7 @@ use tracing::{debug, instrument};
 use crate::errors::cart_error::CartError;
 use crate::models::auth::Claims;
 use crate::models::config::AppState;
-use crate::models::cart::AddToCartRequest;
+use crate::models::cart::{AddToCartRequest, AddToCartResponse};
 use crate::services::cart_service::{add_items_to_cart, get_items_from_cart};
 
 #[instrument(skip(state, user_items_to_cart_payload, claims))]
@@ -16,7 +15,7 @@ pub async fn add_to_cart(State(state): State<AppState>, Extension(claims): Exten
 
     debug!("before item_status");
 
-    let items_status: (HashMap<String, i32>, HashMap<String, i32>) = add_items_to_cart(
+    let items_status: AddToCartResponse = add_items_to_cart(
         &state.redis_pool,
         &state.db_pool,
         &&claims.sub,
