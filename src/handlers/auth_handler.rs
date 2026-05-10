@@ -19,7 +19,7 @@ pub async fn register(State(state): State<AppState>,
 
     if is_valid_email {
 
-        let result = register_user(&state.pool, state.auth_config, String::from(user_payload.email), user_payload.password).await;
+        let result = register_user(&state.db_pool, state.auth_config, String::from(user_payload.email), user_payload.password).await;
 
         match result {
             Ok(success_message) => Ok((StatusCode::CREATED, success_message).into_response()),
@@ -34,6 +34,6 @@ pub async fn register(State(state): State<AppState>,
 #[instrument(skip(state, user_payload))]
 pub async fn login(State(state): State<AppState>,
                    Json(user_payload): Json<LoginRequest>) -> Result<impl IntoResponse, UserLoginError> {
-    let success_message = login_user(&state.pool, state.auth_config, user_payload.identifier, user_payload.password).await?;
+    let success_message = login_user(&state.db_pool, state.auth_config, user_payload.identifier, user_payload.password).await?;
     Ok((StatusCode::OK, success_message).into_response())
 }

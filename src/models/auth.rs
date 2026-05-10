@@ -1,5 +1,6 @@
 use std::env;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Clone, Debug)]
 pub struct AuthConfig {
@@ -24,7 +25,7 @@ impl Default for AuthConfig {
 #[derive(Debug, Serialize, Deserialize)]
 #[derive(Clone)]
 pub struct Claims {
-    pub(crate) sub: String,
+    pub(crate) sub: Uuid,
     pub(crate) role: String,
     pub(crate) exp: usize
 }

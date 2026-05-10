@@ -17,6 +17,7 @@ use axum::response::{IntoResponse, Response};
 use sqlx::{Executor, Pool, Postgres};
 use axum::routing::{delete, patch, post};
 use std::time::Duration;
+use deadpool_redis::{Config, Runtime};
 use tracing::{error, info, instrument, Span};
 use tracing_appender::rolling;
 use tracing_subscriber::{EnvFilter, Layer};
@@ -24,14 +25,15 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tower_http::{trace::{TraceLayer, DefaultMakeSpan}};
 use tower_http::classify::ServerErrorsFailureClass;
-use tower_http::sensitive_headers::{SetSensitiveHeadersLayer, SetSensitiveRequestHeadersLayer, SetSensitiveResponseHeadersLayer};
+use tower_http::sensitive_headers::{SetSensitiveRequestHeadersLayer, SetSensitiveResponseHeadersLayer};
 use http::header;
 use crate::handlers::auth_handler::{login, register};
+use crate::handlers::cart_handler::{add_to_cart, get_cart};
 use crate::handlers::product_handler::{create_product, delete_product, get_all_products, get_product, update_product};
 use crate::middleware::admin::require_admin;
 use crate::middleware::auth::auth_middleware;
 use crate::models::auth::AuthConfig;
-use crate::models::config::{AppState, DatabaseConfig};
+use crate::models::config::{AppState, DatabaseConfig, RedisConfig};
 
 #[tokio::main]
 async fn main() {
@@ -39,12 +41,22 @@ async fn main() {
     let _guard = init_tracing();
 
     let database_config: DatabaseConfig = DatabaseConfig::default();
-    let pool: Pool<Postgres> = create_pool_from_env(&database_config).await;
-    let auth_config: AuthConfig = AuthConfig::default();
-    let state = AppState { pool, auth_config };
-
-
+    let db_pool: Pool<Postgres> = create_pool_from_env(&database_config).await;
     info!("Successfully connected to database!");
+
+    let redis_config = RedisConfig::default();
+    // note, the redis pool is NOT async due to
+    // actual connection happens on first .get().await call)
+    let redis_pool = create_redis_pool(&redis_config);
+    info!("Successfully created redis pool!");
+
+    let auth_config: AuthConfig = AuthConfig::default();
+
+    let state = AppState {
+        db_pool,
+        redis_pool,
+        auth_config
+    };
 
     let app = add_tracing_layer(app(state));
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
@@ -73,6 +85,7 @@ fn app (state: AppState) -> Router {
 fn protected_routes() -> Router<AppState> {
     Router::new()
         .route("/health", get(health_check))
+        .route("/user/cart", post(add_to_cart).get(get_cart))
 }
 
 fn unprotected_routes() -> Router<AppState> {
@@ -96,11 +109,11 @@ async fn health_check() -> impl IntoResponse {
     (StatusCode::OK, "Looks good").into_response()
 }
 
-// Connect to database
+// Connect to database AND create connection pool
 #[instrument(skip(config))]
 async fn create_pool_from_env(config: &DatabaseConfig) -> Pool<Postgres> {
 
-    info!("Connecting to database...");
+    info!("Connecting to database and creating connection pool...");
 
     PgPoolOptions::new()
         .max_connections(config.max_connections)
@@ -121,6 +134,17 @@ async fn create_pool_from_env(config: &DatabaseConfig) -> Pool<Postgres> {
         .await
         .expect("Failed to connect to database, please check if the database is running or if the database url is correct")
 
+}
+
+// Creat redis pool
+#[instrument(skip(redis_config))]
+fn create_redis_pool(redis_config: &RedisConfig) -> deadpool_redis::Pool {
+
+    info!("Creating redis pool...");
+
+    let config = Config::from_url(&redis_config.redis_url);
+
+    config.create_pool(Some(Runtime::Tokio1)).expect("Failed to create redis pool")
 }
 
 fn init_tracing() -> impl Drop {

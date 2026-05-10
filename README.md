@@ -61,13 +61,23 @@ POSTGRES_DB_NAME=YOUR_DB_TEST_NAME
 # Connection URL (update with your actual credentials)
 DATABASE_URL=postgres://YOUR_TEST_NAME:YOUR_TEST_PASSWORD@localhost:5499/YOUR_DB_TEST_NAME?sslmode=disable
 
-# Connection Pool Configuration (integer values)
+# Database Connection Pool Configuration (integer values)
 DB_MAX_CONNECTIONS=10
 DB_MIN_CONNECTIONS=1
 
 # Timeouts (in seconds)
 DB_ACQUIRE_TIMEOUT=10
 DB_IDLE_TIMEOUT=300
+
+# Redis Configuration
+REDIS_PASSWORD=YOUR_TEST_PASSWORD
+
+# Connection URL (update it with your actual credentials)
+REDIS_URL=redis://:YOUR_TEST_PASSWORD@redis_test:6379/0
+# if you changed the container name, change "redis_test" to the name you changed
+
+# Redis Connection Pool Configuration
+REDIS_MAX_CONNECTIONS=15
 
 # JWT Settings
 # Time is in HOURS
@@ -82,6 +92,7 @@ BCRYPT_COST=10
 # Secret key for JWT (change this to a strong random string in production)
 JWT_SECRET=your_super_secret_jwt_key_here_change_in_production
 
+# Logging Configuration
 # Use the one you want for your current needs
 # recommended for daily dev — info from libs, debug from code
 RUST_LOG='info,ecommerce_backend=debug'

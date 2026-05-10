@@ -15,7 +15,7 @@ use crate::services::product_service::{add_new_product, edit_product, get_single
 pub async fn create_product(State(state): State<AppState>, Json(user_product_payload): Json<CreateProductRequest>)
                             -> Result<impl IntoResponse, CreateProductError> {
 
-    let created_product = add_new_product(&user_product_payload, &state.pool).await?;
+    let created_product = add_new_product(&user_product_payload, &state.db_pool).await?;
     Ok((StatusCode::CREATED, Json(created_product)).into_response())
 }
 
@@ -23,7 +23,7 @@ pub async fn create_product(State(state): State<AppState>, Json(user_product_pay
 pub async fn get_all_products(State(state): State<AppState>, Query(product_pagination): Query<ProductPagination>) 
                             -> Result<impl IntoResponse, FetchProductError> {
 
-    let products = list_products(product_pagination, &state.pool).await?;
+    let products = list_products(product_pagination, &state.db_pool).await?;
     Ok((StatusCode::OK, Json(products)))
 
 }
@@ -32,7 +32,7 @@ pub async fn get_all_products(State(state): State<AppState>, Query(product_pagin
 pub async fn get_product(State(state): State<AppState>, Path(product_id): Path<Uuid>) 
                             -> Result<impl IntoResponse, FetchProductError> {
     
-    let product = get_single_product(product_id, &state.pool).await?;
+    let product = get_single_product(product_id, &state.db_pool).await?;
     Ok((StatusCode::OK, Json(product)))
 
 }
@@ -41,7 +41,7 @@ pub async fn get_product(State(state): State<AppState>, Path(product_id): Path<U
 pub async fn update_product(State(state): State<AppState>, Path(product_id): Path<Uuid>, Json(user_product_payload): Json<UpdateProductRequest>) 
                             -> Result<impl IntoResponse, UpdateProductError> {
     
-    let updated_product = edit_product(product_id, &user_product_payload, &state.pool).await?;
+    let updated_product = edit_product(product_id, &user_product_payload, &state.db_pool).await?;
     Ok((StatusCode::OK, Json(updated_product)))
 }
 
@@ -49,6 +49,6 @@ pub async fn update_product(State(state): State<AppState>, Path(product_id): Pat
 pub async fn delete_product(State(state): State<AppState>, Path(product_id): Path<Uuid>) 
                             -> Result<impl IntoResponse, SoftDeleteProductError> {
     
-    let success = remove_product(product_id, &state.pool).await?;
+    let success = remove_product(product_id, &state.db_pool).await?;
     Ok((StatusCode::OK, success))
 }

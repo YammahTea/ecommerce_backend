@@ -33,7 +33,7 @@ fn create_access_token(user_id: Uuid, user_role: String, auth_config: &AuthConfi
         .timestamp() as usize;
 
     let claims: Claims = Claims {
-        sub: user_id.to_string(),
+        sub: user_id,
         role: user_role,
         exp: expiration
     };

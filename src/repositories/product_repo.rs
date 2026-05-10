@@ -1,8 +1,9 @@
 use sqlx::{Pool, Postgres};
 use tracing::{error, instrument};
 use uuid::Uuid;
+use crate::errors::cart_error::CartError;
 use crate::errors::product_error::{FetchProductError, CreateProductError, UpdateProductError, SoftDeleteProductError};
-use crate::models::product::{CreateProductRequest, Product, UpdateProductRequest};
+use crate::models::product::{CreateProductRequest, Product, ProductsInfoForCart, ProductsInfoForPurchase, UpdateProductRequest};
 
 // NOTE: using instrument, please skip everything, fields are logged in the "services" layer ONLY
 
@@ -14,7 +15,7 @@ pub async fn insert_product(pool: &Pool<Postgres>, input: &CreateProductRequest)
         VALUES
         ($1, $2, $3, $4, $5)
         RETURNING *
-        "#;
+    "#;
 
     sqlx::query_as::<_, Product>(query)
         .bind(&input.name)
@@ -40,7 +41,7 @@ pub async fn fetch_products(pool: &Pool<Postgres>, offset: i32, limit: i32) -> R
         ORDER BY created_at DESC
         LIMIT $1
         OFFSET $2
-        "#;
+    "#;
 
     sqlx::query_as::<_, Product>(query)
         .bind(&limit)
@@ -60,7 +61,7 @@ pub async fn fetch_product_by_id(pool: &Pool<Postgres>, product_id: Uuid) -> Res
         SELECT * FROM products
         WHERE id = $1
         AND status = 'active' AND deleted_at IS NULL
-        "#;
+    "#;
 
     sqlx::query_as::<_, Product>(query)
         .bind(&product_id)
@@ -122,4 +123,48 @@ pub async fn soft_delete_product(pool: &Pool<Postgres>, product_id:Uuid) -> Resu
     }
 
     Ok("Product deleted successfully.".to_string())
+}
+
+#[instrument(skip(pool, products_ids))]
+pub async fn get_products_ids_and_stock_quantity(pool: &Pool<Postgres>, products_ids:Vec<Uuid>) -> Result<Vec<ProductsInfoForCart>, CartError> {
+
+    let query = r#"
+        SELECT id, stock_quantity
+        FROM products
+        WHERE status = 'active'
+        AND deleted_at IS NULL
+        AND id = ANY($1)
+    "#;
+
+    sqlx::query_as::<_, ProductsInfoForCart>(&query)
+        .bind(&products_ids)
+
+        .fetch_all(pool).await
+        .map_err(|error_message| {
+            error!(error = ? error_message, "Error occurred while fetching products' information");
+            CartError::DatabaseError
+        })
+
+}
+
+#[instrument(skip(pool, products_ids))]
+pub async fn get_products_info_for_purchase(pool: &Pool<Postgres>, products_ids: Vec<Uuid>) -> Result<Vec<ProductsInfoForPurchase>, CartError> {
+
+    let query = r#"
+        SELECT id, name, price_in_cents
+        FROM products
+        WHERE status = 'active'
+        AND deleted_at IS NULL
+        AND id = ANY($1)
+    "#;
+
+    sqlx::query_as::<_, ProductsInfoForPurchase>(&query)
+        .bind(&products_ids)
+
+        .fetch_all(pool).await
+        .map_err(|error_message| {
+            error!(error = ? error_message, "Error occurred while fetching products' information for purchase");
+            CartError::DatabaseError
+        })
+
 }

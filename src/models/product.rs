@@ -83,3 +83,17 @@ impl UpdateProductRequest {
         Ok(())
     }
 }
+
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct ProductsInfoForCart {
+    pub(crate) id: Uuid,
+    pub(crate) stock_quantity: i32,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct ProductsInfoForPurchase {
+    pub(crate) id: Uuid,
+    pub(crate) name: String,
+    pub(crate) price_in_cents: i32
+}
