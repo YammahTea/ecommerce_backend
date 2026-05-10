@@ -2,3 +2,4 @@ pub mod user;
 pub mod config;
 pub mod auth;
 pub mod product;
+pub mod cart;

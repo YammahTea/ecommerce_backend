@@ -28,8 +28,23 @@ impl Default for DatabaseConfig {
     }
 }
 
+pub struct RedisConfig {
+    pub redis_url: String,
+    pub max_connections: u32,
+}
+
+impl Default for RedisConfig {
+    fn default() -> Self {
+        Self {
+            redis_url: env::var("REDIS_URL").expect("REDIS_URL is not set in .env"),
+
+            max_connections: env::var("REDIS_MAX_CONNECTIONS").expect("REDIS_MAX_CONNECTIONS is not set in .env").parse().unwrap(),
+        }
+    }
+}
 #[derive(Debug, Clone)]
-pub struct AppState {
-    pub pool: Pool<Postgres>,
+pub struct  AppState {
+    pub db_pool: Pool<Postgres>,
+    pub redis_pool: deadpool_redis::Pool,
     pub auth_config: AuthConfig
 }
