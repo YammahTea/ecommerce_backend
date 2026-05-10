@@ -11,13 +11,13 @@ use crate::models::cart::AddToCartRequest;
 use crate::services::cart_service::{add_items_to_cart, get_items_from_cart};
 
 #[instrument(skip(state, user_items_to_cart_payload, claims))]
-pub async fn add_to_cart(State(mut state): State<AppState>, Extension(claims): Extension<Claims>, Json(user_items_to_cart_payload): Json<AddToCartRequest>)
+pub async fn add_to_cart(State(state): State<AppState>, Extension(claims): Extension<Claims>, Json(user_items_to_cart_payload): Json<AddToCartRequest>)
                      -> Result<impl IntoResponse, CartError> {
 
     debug!("before item_status");
 
     let items_status: (HashMap<String, i32>, HashMap<String, i32>) = add_items_to_cart(
-        &mut state.redis_pool,
+        &state.redis_pool,
         &state.db_pool,
         &&claims.sub,
         user_items_to_cart_payload.items
@@ -31,8 +31,8 @@ pub async fn add_to_cart(State(mut state): State<AppState>, Extension(claims): E
 }
 
 #[instrument(skip(state, claims))]
-pub async fn get_cart(State(mut state): State<AppState>, Extension(claims): Extension<Claims>) -> Result<impl IntoResponse, CartError> {
+pub async fn get_cart(State(state): State<AppState>, Extension(claims): Extension<Claims>) -> Result<impl IntoResponse, CartError> {
 
-    let items_in_cart = get_items_from_cart(&mut state.redis_pool, state.db_pool, &claims.sub).await?;
+    let items_in_cart = get_items_from_cart(&state.redis_pool, state.db_pool, &claims.sub).await?;
     Ok((StatusCode::OK, Json(items_in_cart)).into_response())
 }

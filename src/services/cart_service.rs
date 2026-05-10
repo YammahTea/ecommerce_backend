@@ -3,13 +3,13 @@ use sqlx::{Pool, Postgres};
 use tracing::{debug, error, info, instrument, warn};
 use uuid::{Uuid};
 use crate::errors::cart_error::CartError;
-use crate::models::cart::{CartItem, CartItemDetail, CartResponse};
+use crate::models::cart::{AddToCartResponse, CartItem, CartItemDetail, GetCartResponse};
 use crate::models::product::ProductsInfoForPurchase;
 use crate::repositories::cart_repo::{get_cart, save_cart};
 use crate::repositories::product_repo::{get_products_ids_and_stock_quantity, get_products_info_for_purchase};
 
 #[instrument(skip(redis_pool, db_pool, items), fields(user_id = %user_id))]
-pub async fn add_items_to_cart(redis_pool: &mut deadpool_redis::Pool, db_pool: &Pool<Postgres>, user_id: &Uuid, items: Vec<CartItem>) -> Result<(HashMap<String, i32>, HashMap<String, i32>), CartError> {
+pub async fn add_items_to_cart(redis_pool: &deadpool_redis::Pool, db_pool: &Pool<Postgres>, user_id: &Uuid, items: Vec<CartItem>) -> Result<AddToCartResponse, CartError> {
 
     let mut redis_connection = redis_pool.get().await
         .map_err(|error_message| {
@@ -85,11 +85,14 @@ pub async fn add_items_to_cart(redis_pool: &mut deadpool_redis::Pool, db_pool: &
 
     debug!("Passed saving process");
 
-    Ok((approved_items, rejected_items))
+    Ok(AddToCartResponse {
+        approved_items,
+        rejected_items
+    })
 }
 
 #[instrument(skip(redis_pool, db_pool), fields(user_id = %user_id))]
-pub async fn get_items_from_cart(redis_pool: &deadpool_redis::Pool, db_pool: Pool<Postgres>, user_id: &Uuid) -> Result<CartResponse, CartError> {
+pub async fn get_items_from_cart(redis_pool: &deadpool_redis::Pool, db_pool: Pool<Postgres>, user_id: &Uuid) -> Result<GetCartResponse, CartError> {
 
     let mut redis_connection = redis_pool.get().await
         .map_err(|error_message| {
@@ -151,7 +154,7 @@ pub async fn get_items_from_cart(redis_pool: &deadpool_redis::Pool, db_pool: Poo
 
     }
 
-    let cart_response: CartResponse = CartResponse {
+    let cart_response: GetCartResponse = GetCartResponse {
         items: items_combined_info,
         grand_total_in_cents: grand_total
     };

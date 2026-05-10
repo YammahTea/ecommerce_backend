@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -15,7 +16,7 @@ pub struct CartItem {
 
 // combined data sent back to frontend
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CartResponse {
+pub struct GetCartResponse {
     pub items: Vec<CartItemDetail>,
     pub grand_total_in_cents: i32 // sum of line_total_cents
 }
@@ -27,4 +28,10 @@ pub struct CartItemDetail {
     pub name: String,
     pub unit_price_in_cents: i32,
     pub line_total_in_cents: i32 // quantity * unit_price_in_cents
+}
+
+#[derive(Debug, Serialize)]
+pub struct AddToCartResponse {
+    pub approved_items: HashMap<String, i32>,
+    pub rejected_items: HashMap<String, i32>
 }
