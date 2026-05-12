@@ -126,3 +126,24 @@ For automatic reloading during development (recommended), install and use cargo-
 cargo install cargo-watch
 cargo watch -x run
 ```
+
+#### 5. Fake data for testing
+To generate fake data for testing purposes:
+* **1- Make sure the database is already up**
+
+* **2- Make sure that you ran the sqlx migration files**
+
+* **3-Run the src/bin/seed.rs file:**
+```bash
+cargo run --bin seed
+```
+
+Note: In 'Cargo.toml', I have already added:
+```text
+[package]
+name = "ecommerce_backend"
+version = "0.1.0"
+edition = "2024"
+default-run = "ecommerce_backend"
+```
+**To prevent you from choosing the bin everytime you run the application!**
