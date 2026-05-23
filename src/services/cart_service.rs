@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use sqlx::{Pool, Postgres};
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{debug, error, instrument, warn};
 use uuid::{Uuid};
 use crate::errors::cart_error::CartError;
 use crate::models::cart::{AddToCartResponse, CartItem, CartItemDetail, GetCartResponse};
