@@ -1,0 +1,1 @@
+CREATE INDEX index_products_status ON products(status) WHERE status = 'active';

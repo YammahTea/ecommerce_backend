@@ -26,7 +26,7 @@ async fn main() {
 
     println!("Connected to db");
 
-    for _ in 0..100 {
+    for _ in 0..10000 {
         let product: CreateProduct = Faker.fake();
         insert_product(&db_pool, &product).await;
     }

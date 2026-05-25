@@ -158,7 +158,7 @@ pub async fn token_rotation(pool: &Pool<Postgres>, raw_token: &String, auth_conf
     //     If it exists AND expires_at is in the future:
     //          Generate a new 15-minute Access Token.
     //          Generate a new 7-day Refresh Token.
-    //          Delete the old Refresh Token from the DB (This is the "Rotation" part!).
+    //          Delete the old Refresh Token from the DB.
     //          Save the new Refresh Token to the DB.
     //     Return both new tokens to the user.
 
@@ -176,7 +176,6 @@ pub async fn token_rotation(pool: &Pool<Postgres>, raw_token: &String, auth_conf
             let _access_token = create_access_token(&token_info.user_id, token_info.role, &auth_config)?;
 
             let (_raw_token, hashed_token) = create_refresh_token(&auth_config);
-            info!("{hashed_token}");
             let refresh_token_expiration_date = chrono::Utc::now()
                 .checked_add_signed(chrono::Duration::days(auth_config.refresh_token_expiration_time))
                 .ok_or(UserLoginError::TokenCreationError)?;

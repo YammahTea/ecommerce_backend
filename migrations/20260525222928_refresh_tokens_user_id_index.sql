@@ -1,0 +1,1 @@
+CREATE INDEX index_refresh_tokens_user_id ON refresh_tokens(user_id);
