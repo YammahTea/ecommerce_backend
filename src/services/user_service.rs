@@ -1,7 +1,7 @@
 use bcrypt::{BcryptResult};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use sqlx::{Pool, Postgres};
-use tracing::{error, info, instrument};
+use tracing::{error, instrument};
 use uuid::Uuid;
 use sha2::{Digest, Sha256};
 use crate::models::auth::{AuthConfig, Claims};
@@ -129,9 +129,19 @@ pub async fn login_user(pool: &Pool<Postgres>, auth_config: &AuthConfig, user_id
                             .checked_add_signed(chrono::Duration::days(auth_config.refresh_token_expiration_time))
                             .ok_or(UserLoginError::TokenCreationError)?;
 
+                        // database transaction
+                        let mut tx = pool.begin().await.map_err(|error_message| {
+                            error!(error = ?error_message, "Error occurred while making db transaction");
+                            UserLoginError::DatabaseError
+                        })?;
 
-                        insert_refresh_token(&pool, valid_user.id, &hashed_token, refresh_token_expiration_date).await?;
-                        
+                        insert_refresh_token(&mut tx, valid_user.id, &hashed_token, refresh_token_expiration_date).await?;
+
+                        tx.commit().await.map_err(|error_message| {
+                            error!(error = ?error_message, "Error occurred while closing db transaction");
+                            UserLoginError::DatabaseError
+                        })?;
+
                         Ok(UserLoginResponse {
                             access_token: _access_token,
                             raw_token: _raw_token
@@ -180,10 +190,21 @@ pub async fn token_rotation(pool: &Pool<Postgres>, raw_token: &String, auth_conf
                 .checked_add_signed(chrono::Duration::days(auth_config.refresh_token_expiration_time))
                 .ok_or(UserLoginError::TokenCreationError)?;
 
-            // old refresh token
-            delete_refresh_token(&pool, token_info.token_id).await?;
+            // database transaction
+            let mut tx = pool.begin().await.map_err(|error_message| {
+                    error!(error = ?error_message, "Error occurred while making db transaction");
+                    UserLoginError::DatabaseError
+                })?;
 
-            insert_refresh_token(&pool, token_info.user_id, &hashed_token, refresh_token_expiration_date).await?;
+
+            // old refresh token
+            delete_refresh_token(&mut tx, token_info.token_id).await?;
+            insert_refresh_token(&mut tx, token_info.user_id, &hashed_token, refresh_token_expiration_date).await?;
+
+            tx.commit().await.map_err(|error_message| {
+                error!(error = ?error_message, "Error occurred while closing db transaction");
+                UserLoginError::DatabaseError
+            })?;
 
             Ok(UserLoginResponse {
                 access_token: _access_token,

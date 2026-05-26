@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use sqlx::{Pool, Postgres};
+use sqlx::{Pool, Postgres, Transaction};
 use tracing::{error, instrument};
 use uuid::Uuid;
 use crate::errors::user_error::{UserCreationError, UserLoginError};
@@ -61,8 +61,8 @@ pub async fn get_user_by_username(pool: &Pool<Postgres>, username: &str) -> Resu
         })
 }
 
-#[instrument(skip(pool, user_id, token_hash, expire_time))]
-pub async fn insert_refresh_token(pool: &Pool<Postgres>, user_id: Uuid, token_hash: &String, expire_time: DateTime<Utc>) -> Result<(), UserLoginError> {
+#[instrument(skip(tx, user_id, token_hash, expire_time))]
+pub async fn insert_refresh_token(tx: &mut Transaction<'_, Postgres>, user_id: Uuid, token_hash: &String, expire_time: DateTime<Utc>) -> Result<(), UserLoginError> {
 
     sqlx::query!(
         "INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)",
@@ -70,7 +70,7 @@ pub async fn insert_refresh_token(pool: &Pool<Postgres>, user_id: Uuid, token_ha
         token_hash,
         expire_time
     )
-        .execute(pool).await
+        .execute(&mut **tx).await
         .map(|_| Ok(())) // result is not needed (it will say "inserted 1 row")
         .map_err(|error_message| {
             error!(error = ?error_message, "Error occurred while inserting refresh token");
@@ -102,14 +102,14 @@ pub async fn find_refresh_token(pool: &Pool<Postgres>, token_hash: &String) -> R
         })
 }
 
-#[instrument(skip(pool, token_id))]
-pub async fn delete_refresh_token(pool: &Pool<Postgres>, token_id: Uuid) -> Result<(), UserLoginError> {
+#[instrument(skip(tx, token_id))]
+pub async fn delete_refresh_token(tx: &mut Transaction<'_, Postgres>, token_id: Uuid) -> Result<(), UserLoginError> {
 
     sqlx::query!(
         "DELETE FROM ONLY ( refresh_tokens ) WHERE token_id = $1",
         token_id
     )
-        .execute(pool).await
+        .execute(&mut **tx).await
         .map(|_| Ok(())) // result is not needed (it will say "deleted 1 row")
         .map_err(|error_message| {
             error!(error = ?error_message, token_id = ?token_id, "Error occurred while deleting refresh token");
