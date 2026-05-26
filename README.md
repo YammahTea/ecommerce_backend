@@ -79,9 +79,13 @@ REDIS_URL=redis://:YOUR_TEST_PASSWORD@redis_test:6379/0
 # Redis Connection Pool Configuration
 REDIS_MAX_CONNECTIONS=15
 
+# Adjust the amount to your liking
 # JWT Settings
-# Time is in HOURS
-ACCESS_TOKEN_EXPIRE=24
+# Time is in MINUTES:
+ACCESS_TOKEN_EXPIRE=15
+
+# Time is in Days:
+REFRESH_TOKEN_EXPIRE=7
 
 # Password Hashing (do NOT change after initial setup) (any number between 4 and 31)
 BCRYPT_COST=10
@@ -91,6 +95,7 @@ BCRYPT_COST=10
 
 # Secret key for JWT (change this to a strong random string in production)
 JWT_SECRET=your_super_secret_jwt_key_here_change_in_production
+REFRESH_SECRET=your_secret_string_different_from_the_jwt_secret_for_better_security
 
 # Logging Configuration
 # Use the one you want for your current needs

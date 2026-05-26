@@ -27,7 +27,7 @@ use tower_http::{trace::{TraceLayer, DefaultMakeSpan}};
 use tower_http::classify::ServerErrorsFailureClass;
 use tower_http::sensitive_headers::{SetSensitiveRequestHeadersLayer, SetSensitiveResponseHeadersLayer};
 use http::header;
-use crate::handlers::auth_handler::{login, register};
+use crate::handlers::auth_handler::{login, register, token_refresh};
 use crate::handlers::cart_handler::{add_to_cart, get_cart};
 use crate::handlers::product_handler::{create_product, delete_product, get_all_products, get_product, update_product};
 use crate::middleware::admin::require_admin;
@@ -92,7 +92,8 @@ fn unprotected_routes() -> Router<AppState> {
     Router::new()
         .route("/user/register", post(register))
         .route("/user/login", post(login))
-
+        .route("/user/refresh", post(token_refresh))
+        
         .route("/products", get(get_all_products))
         .route("/products/{id}", get(get_product))
 }
